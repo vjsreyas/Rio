@@ -1,0 +1,22 @@
+# Dependencies (The most important one)
+node_modules/
+
+# Environment variables (Security risk if uploaded)
+.env
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Test/Junk files
+test.txt
