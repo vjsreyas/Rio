@@ -31,7 +31,7 @@ window.addEventListener("DOMContentLoaded", () => {
   let flyTimer = null;
 
   function flyRandom() {
-    if (!isFlying) return;
+    if (!isFlying || isDocked) return;
 
     const { width, height } = hero.getBoundingClientRect();
 
@@ -72,6 +72,7 @@ window.addEventListener("DOMContentLoaded", () => {
         // 🗿 STATUE MODE
         stopFlying();
         btn.textContent = "STARGAZE";
+
       } else {
         // 🌌 STARGAZE MODE
         startFlying();
@@ -117,6 +118,50 @@ window.addEventListener("DOMContentLoaded", () => {
       if (video.currentTime >= video.duration - 0.1) switchToImage();
     });
   }
+/* ================= DRAG → FLY TO DROP (SCREEN SAFE) ================= */
+
+let isDragging = false;
+let offsetX = 0;
+let offsetY = 0;
+
+// START DRAG (statue mode only)
+drone.addEventListener("mousedown", (e) => {
+
+  if (isFlying) return;
+
+  isDragging = true;
+
+  const rect = drone.getBoundingClientRect();
+  offsetX = e.clientX - rect.left;
+  offsetY = e.clientY - rect.top;
+
+  drone.style.transition = "none";
+  drone.style.cursor = "grabbing";
+});
+
+
+// DROP → FLY TO POSITION (inside viewport)
+document.addEventListener("mouseup", (e) => {
+  if (!isDragging) return;
+
+  isDragging = false;
+  drone.style.cursor = "grab";
+
+  const droneRect = drone.getBoundingClientRect();
+
+  // 👇 Position relative to viewport (NOT hero)
+  let x = e.clientX - offsetX;
+  let y = e.clientY - offsetY;
+
+  // 🚧 Keep inside screen boundaries
+  x = Math.max(0, Math.min(window.innerWidth - droneRect.width, x));
+  y = Math.max(0, Math.min(window.innerHeight - droneRect.height, y));
+
+  // ✨ Smooth movement
+  drone.style.transition = "all 3.0s ease";
+  drone.style.left = `${x}px`;
+  drone.style.top = `${y}px`;
+});
 
   /* ================= TEXT "RIO" ================= */
   if (brand) {
@@ -137,7 +182,197 @@ window.addEventListener("DOMContentLoaded", () => {
   if (heroContent) {
     setTimeout(() => heroContent.classList.add("show"), 10000);
   }
+
+/* ================= PERFECT SUMMON → DOCK SYSTEM ================= */
+
+let isDocked = false;
+
+const station = document.getElementById("station");
+const summonBtn = document.querySelector(".station-btn.primary");
+
+
+if (summonBtn && station && drone) {
+
+  summonBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+
+    const batteryText = document.querySelector(".battery-text");
+    const batteryRect = batteryText.getBoundingClientRect();
+
+    if (!isDocked) {
+      // 🔋 DOCK MODE
+      isDocked = true;
+      stopFlying(); // stop AI
+
+      // Use fixed coordinates for both dock and release
+      const centerX = batteryRect.left + batteryRect.width / 2;
+      const centerY = batteryRect.top + batteryRect.height / 2;
+
+      // Animate smoothly from current position to dock
+      const droneRect = drone.getBoundingClientRect();
+      const currentX = droneRect.left + droneRect.width / 2;
+      const currentY = droneRect.top + droneRect.height / 2;
+
+      // Set initial fixed position (current visual position)
+      drone.style.position = "fixed";
+      drone.style.left = currentX + "px";
+      drone.style.top = currentY + "px";
+      drone.style.transform = "translate(-50%, -50%)";
+
+      // Animate to battery text
+      requestAnimationFrame(() => {
+        drone.style.transition = "all 0.9s cubic-bezier(.50,.61,.36,1)";
+        drone.style.left = centerX + "px";
+        drone.style.top = centerY + "px";
+      });
+
+      // Clear transition after animation
+      drone.addEventListener("transitionend", function fixDock() {
+        drone.style.transition = "";
+        drone.style.left = centerX + "px";
+        drone.style.top = centerY + "px";
+        drone.removeEventListener("transitionend", fixDock);
+      });
+
+      summonBtn.textContent = "Dismiss";
+
+    } else {
+      // 🚀 RELEASE MODE
+      isDocked = false;
+
+      // Animate a tiny jump away then resume flying
+      const droneRect = drone.getBoundingClientRect();
+      const currentX = droneRect.left + droneRect.width / 2;
+      const currentY = droneRect.top + droneRect.height / 2;
+
+      // Keep fixed position visually
+      drone.style.position = "fixed";
+      drone.style.left = currentX + "px";
+      drone.style.top = currentY + "px";
+      drone.style.transform = "translate(-50%, -50%)";
+      drone.style.transition = "all 0.6s ease-out";
+
+      // Slight offset for a natural release "fly away"
+      requestAnimationFrame(() => {
+        drone.style.left = currentX + 20 + "px";
+        drone.style.top = currentY - 40 + "px";
+      });
+
+      // After offset animation, resume normal flying
+      drone.addEventListener("transitionend", function releaseDrone() {
+        drone.style.transition = "all 3s ease-in-out"; // normal flying
+        startFlying(); // resume AI
+        drone.removeEventListener("transitionend", releaseDrone);
+      });
+
+      summonBtn.textContent = "Summon";
+    }
+  });
+}
+
+
+
+
+
+
+
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //  ================= ABOUT =================
 // Function to animate about section when in view
 function animateAboutSection() {
@@ -269,265 +504,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }, { threshold: 0.3 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   stats.forEach(stat => observer.observe(stat));
 });
