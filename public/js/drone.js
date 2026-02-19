@@ -11,29 +11,86 @@ window.addEventListener("DOMContentLoaded", () => {
   const heroContent = document.querySelector(".hero-content");
 
   if (!drone || !hero) return;
-
+  function setEyesToCurrentMode() {
+    if (isFlying) {
+      // Flying → normal
+      eyes.forEach(e => e.classList.remove("statue"));
+    } else {
+      // Statue → yellow
+      eyes.forEach(e => e.classList.add("statue"));
+    }
+  }
   /* ================= INITIAL POSITION ================= */
   drone.style.left = "50%";
   drone.style.top = "40%";
   drone.style.transition = "all 3s ease-in-out";
 
-  /* ================= RANDOM FLYING ================= */
+  /* ================= RANDOM FLYING (CONTROLLED) ================= */
+
+  let isFlying = true;
+  let flyTimer = null;
+
   function flyRandom() {
+    if (!isFlying) return;
+
     const { width, height } = hero.getBoundingClientRect();
+
     drone.style.left = Math.random() * (width - 120) + "px";
     drone.style.top = Math.random() * (height - 120) + "px";
-    setTimeout(flyRandom, 3000);
+
+    flyTimer = setTimeout(flyRandom, 3000);
   }
+
+  function startFlying() {
+    if (isFlying) return;
+    isFlying = true;
+    flyRandom();
+  }
+
+  function stopFlying() {
+    isFlying = false;
+    clearTimeout(flyTimer);
+  }
+
 
   setTimeout(() => {
     drone.style.opacity = "1";
     drone.style.pointerEvents = "auto";
-    flyRandom();
+    flyRandom(); // ✅ correct starter
   }, 10000); // show drone after 10s
+  /* ================= BUTTON CONTROL ================= */
 
+  const btn = document.getElementById("toggleBtn");
+
+  if (btn) {
+    btn.textContent = "STATUE"; // starts flying
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+
+      if (isFlying) {
+        // 🗿 STATUE MODE
+        stopFlying();
+        btn.textContent = "STARGAZE";
+      } else {
+        // 🌌 STARGAZE MODE
+        startFlying();
+        btn.textContent = "STATUE";
+      }
+
+      setEyesToCurrentMode(); // update eye color
+    });
+  }
+  /* ================= CLICK REACTION ================= */
   /* ================= CLICK REACTION ================= */
   drone.addEventListener("click", () => {
-    eyes.forEach(eye => eye.classList.add("angry"));
+
+    // 🧹 Remove mode color first
+    eyes.forEach(e => {
+      e.classList.remove("statue");
+      e.classList.add("angry");   // 🔴 red
+    });
+
     drone.classList.add("dash");
 
     const { width, height } = hero.getBoundingClientRect();
@@ -41,9 +98,13 @@ window.addEventListener("DOMContentLoaded", () => {
     drone.style.top = Math.random() * (height - 120) + "px";
 
     setTimeout(() => drone.classList.remove("dash"), 500);
-    setTimeout(() => eyes.forEach(eye => eye.classList.remove("angry")), 1500);
-  });
 
+    // ⏱️ Restore correct mode color
+    setTimeout(() => {
+      eyes.forEach(e => e.classList.remove("angry"));
+      setEyesToCurrentMode();   // 🧠 restore yellow or normal
+    }, 1500);
+  });
   /* ================= VIDEO → IMAGE SWITCH ================= */
   if (video && image) {
     const switchToImage = () => {
@@ -208,6 +269,265 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }, { threshold: 0.3 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   stats.forEach(stat => observer.observe(stat));
 });
