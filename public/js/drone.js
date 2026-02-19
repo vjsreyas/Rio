@@ -15,7 +15,8 @@ window.addEventListener("DOMContentLoaded", () => {
     if (isFlying) {
       // Flying → normal
       eyes.forEach(e => e.classList.remove("statue"));
-    } else {
+    }
+else {
       // Statue → yellow
       eyes.forEach(e => e.classList.add("statue"));
     }
@@ -192,83 +193,115 @@ const summonBtn = document.querySelector(".station-btn.primary");
 
 
 if (summonBtn && station && drone) {
-
   summonBtn.addEventListener("click", (e) => {
     e.preventDefault();
 
     const batteryText = document.querySelector(".battery-text");
     const batteryRect = batteryText.getBoundingClientRect();
+    const heroRect = hero.getBoundingClientRect(); // hero container
+
+    // Center of battery text in viewport
+    const centerX = batteryRect.left + batteryRect.width / 2;
+    const centerY = batteryRect.top + batteryRect.height / 2;
+
+    // Convert to hero coordinates (absolute inside hero)
+    const absX = centerX - heroRect.left;
+    const absY = centerY - heroRect.top;
 
     if (!isDocked) {
       // 🔋 DOCK MODE
       isDocked = true;
       stopFlying(); // stop AI
 
-      // Use fixed coordinates for both dock and release
-      const centerX = batteryRect.left + batteryRect.width / 2;
-      const centerY = batteryRect.top + batteryRect.height / 2;
-
-      // Animate smoothly from current position to dock
+      // Get current drone position (viewport coordinates)
       const droneRect = drone.getBoundingClientRect();
       const currentX = droneRect.left + droneRect.width / 2;
       const currentY = droneRect.top + droneRect.height / 2;
 
-      // Set initial fixed position (current visual position)
+      // Set drone at current visual position (fixed) so animation starts from here
       drone.style.position = "fixed";
       drone.style.left = currentX + "px";
       drone.style.top = currentY + "px";
       drone.style.transform = "translate(-50%, -50%)";
+      drone.style.transition = "all 0.9s cubic-bezier(.50,.61,.36,1)";
 
       // Animate to battery text
       requestAnimationFrame(() => {
-        drone.style.transition = "all 0.9s cubic-bezier(.50,.61,.36,1)";
         drone.style.left = centerX + "px";
         drone.style.top = centerY + "px";
       });
 
-      // Clear transition after animation
+      // After animation completes, switch to absolute inside hero
       drone.addEventListener("transitionend", function fixDock() {
-        drone.style.transition = "";
-        drone.style.left = centerX + "px";
-        drone.style.top = centerY + "px";
+        drone.style.transition = ""; // remove animation
+        drone.style.position = "absolute"; // now absolute
+        drone.style.left = absX + "px";
+        drone.style.top = absY + "px";
+        drone.style.transform = "translate(-50%, -50%)";
         drone.removeEventListener("transitionend", fixDock);
       });
-
+ eyes.forEach(e => {
+      e.classList.add("dock");   // green
+    });
       summonBtn.textContent = "Dismiss";
 
     } else {
-      // 🚀 RELEASE MODE
-      isDocked = false;
+    // 🚀 RELEASE MODE
+// 🚀 RELEASE MODE
+isDocked = false;
 
-      // Animate a tiny jump away then resume flying
-      const droneRect = drone.getBoundingClientRect();
-      const currentX = droneRect.left + droneRect.width / 2;
-      const currentY = droneRect.top + droneRect.height / 2;
+// Current viewport position
+const droneRect = drone.getBoundingClientRect();
+const heroRect = hero.getBoundingClientRect();
 
-      // Keep fixed position visually
-      drone.style.position = "fixed";
-      drone.style.left = currentX + "px";
-      drone.style.top = currentY + "px";
-      drone.style.transform = "translate(-50%, -50%)";
-      drone.style.transition = "all 0.6s ease-out";
+// Convert viewport → hero coordinates
+const currentX = droneRect.left - heroRect.left + droneRect.width / 2;
+const currentY = droneRect.top - heroRect.top + droneRect.height / 2;
 
-      // Slight offset for a natural release "fly away"
-      requestAnimationFrame(() => {
-        drone.style.left = currentX + 20 + "px";
-        drone.style.top = currentY - 40 + "px";
-      });
+// 1️⃣ Freeze visual position
+drone.style.transition = "none";
+drone.style.position = "absolute";
+drone.style.left = currentX + "px";
+drone.style.top = currentY + "px";
+drone.style.transform = "translate(-50%, -50%)";
 
-      // After offset animation, resume normal flying
-      drone.addEventListener("transitionend", function releaseDrone() {
-        drone.style.transition = "all 3s ease-in-out"; // normal flying
-        startFlying(); // resume AI
-        drone.removeEventListener("transitionend", releaseDrone);
-      });
+// Force layout sync
+drone.getBoundingClientRect();
 
-      summonBtn.textContent = "Summon";
-    }
+// 2️⃣ Animate fly-off
+drone.style.transition = "all 0.6s ease-out";
+drone.style.left = currentX + 20 + "px";
+drone.style.top = currentY - 40 + "px";
+
+// 3️⃣ After animation → switch to fixed for AI flying
+drone.addEventListener("transitionend", function releaseDrone() {
+
+  const rect = drone.getBoundingClientRect();
+
+  drone.style.transition = "none";
+  drone.style.position = "fixed";
+  drone.style.left = rect.left + rect.width / 2 + "px";
+  drone.style.top = rect.top + rect.height / 2 + "px";
+  drone.style.transform = "translate(-50%, -50%)";
+
+  drone.getBoundingClientRect(); // flush
+
+  drone.style.transition = "all 3s ease-in-out";
+  startFlying();
+eyes.forEach(e => {
+      e.classList.remove("dock");
+    });
+  drone.removeEventListener("transitionend", releaseDrone);
+});
+
+
+
+  summonBtn.textContent = "Summon";
+}
   });
 }
+
+
 
 
 
