@@ -10,6 +10,8 @@
 body {
   font-family: "Inter", sans-serif;
   color: #1a1a1a;
+overflow-x: hidden;
+user-select: none;
 }
 
 /* =========================
@@ -111,7 +113,12 @@ body {
    PET DRONE
 ========================= */
 #drone { opacity:0; pointer-events:none; transition: opacity 0.5s ease; }
-
+#drone {
+  position: absolute;
+  left: 200px;
+  top: 200px;
+  pointer-events: none; /* allows dragging through drone */
+}
 .drone {
   position: fixed;
   width: 220px;
@@ -150,11 +157,15 @@ body {
   box-shadow:0 0 12px #7fd6ff;
   transition: background 0.6s, box-shadow 0.6s;
 }
-.eye.angry {
-  background:#ff2b2b;
-  box-shadow:0 0 15px #ff2b2b, 0 0 35px #ff2b2b;
+.eye.statue {
+  background: #ffd400;
+  box-shadow: 0 0 12px #ffd400;
 }
 
+.eye.angry {
+  background: #ff2b2b;
+  box-shadow: 0 0 12px #ff2b2b;
+}
 .leg {
   position:absolute; bottom:-12px;
   width:10px; height:22px;
@@ -535,4 +546,3 @@ border-radius: 20px;
   .hero-title { font-size: 2.5rem; }
   .about-heading { font-size: 1.5rem; }
 }
-
