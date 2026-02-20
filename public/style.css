@@ -621,8 +621,10 @@ img {
 .footer-section {
   background: #262626;
   color: #d9d9d9;
+  font-size: 14px;
 }
 
+/* Top bar */
 .footer-top-bar {
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
@@ -632,15 +634,24 @@ img {
   font-family: "Playfair Display", serif;
 }
 
+/* Text */
 .footer-text {
-  font-size: 0.75rem;
-  line-height: 2;
-  opacity: 0.8;
+  line-height: 1.8;
+  opacity: 0.85;
+  margin: 0;
 }
 
+/* Social icons row */
+.social-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* Social icons */
 .social-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.3);
   display: flex;
@@ -648,7 +659,7 @@ img {
   justify-content: center;
   color: #d9d9d9;
   text-decoration: none;
-  font-size: 0.75rem;
+  font-size: 14px;
   transition: background 0.3s;
 }
 
@@ -656,6 +667,19 @@ img {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Legal section */
+.footer-legal {
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin-top: 24px;
+  padding-top: 12px;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.footer-legal p {
+  margin: 4px 0;
+}
 
 /* =========================
    RESPONSIVE
