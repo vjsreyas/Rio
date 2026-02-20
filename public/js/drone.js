@@ -1,37 +1,110 @@
-/* =========================
+/* =========================================================
    HERO & DRONE SCRIPT
-========================= */
-window.addEventListener("DOMContentLoaded", () => {
-  const drone = document.getElementById("drone");
-  const hero = document.querySelector(".hero-section");
-  const video = document.getElementById("heroVideo");
-  const image = document.getElementById("heroImage");
-  const eyes = drone?.querySelectorAll(".eye");
-  const brand = document.getElementById("brandText");
-  const heroContent = document.querySelector(".hero-content");
+========================================================= */
 
-  if (!drone || !hero) return;
-  function setEyesToCurrentMode() {
-    if (isFlying) {
-      // Flying → normal
-      eyes.forEach(e => e.classList.remove("statue"));
-    }
-else {
-      // Statue → yellow
-      eyes.forEach(e => e.classList.add("statue"));
-    }
-  }
-  /* ================= INITIAL POSITION ================= */
+window.addEventListener("DOMContentLoaded", initApp);
+
+
+/* =========================================================
+   GLOBAL STATE (same as original)
+========================================================= */
+
+let isFlying = true;
+let flyTimer = null;
+let isDocked = false;
+let isDocking = false;
+let previousEyeMode = null;
+let wasFlyingBeforeDock = true;
+
+
+/* =========================================================
+   INIT APP
+========================================================= */
+
+function initApp() {
+
+  const el = getElements();
+  if (!el.drone || !el.hero) return;
+
+  setInitialDronePosition(el.drone);
+
+  setupFlyingSystem(el);
+  setupToggleButton(el);
+  setupClickReaction(el);
+  setupVideoSwitch(el);
+  setupDragSystem(el);
+  setupScanSystem(el);
+  setupBrandText(el);
+  setupHeroContent(el);
+  setupSummonDockSystem(el);
+
+  revealDroneAfterDelay(el.drone, el.hero);
+
+  // Scroll sections
+  animateAboutSection();
+  window.addEventListener("scroll", animateAboutSection);
+
+  animateServicesSection();
+  window.addEventListener("scroll", animateServicesSection);
+
+  setupProjectObservers();
+  setupStatsCounter();
+}
+
+
+/* =========================================================
+   ELEMENT COLLECTOR
+========================================================= */
+
+function getElements() {
+
+  const drone = document.getElementById("drone");
+
+  return {
+    drone,
+    hero: document.querySelector(".hero-section"),
+    video: document.getElementById("heroVideo"),
+    image: document.getElementById("heroImage"),
+    eyes: drone?.querySelectorAll(".eye"),
+    brand: document.getElementById("brandText"),
+    heroContent: document.querySelector(".hero-content"),
+    scanDiv: document.querySelector(".scan"),
+    toggleBtn: document.getElementById("toggleBtn"),
+    scanBtn: document.querySelector(".station-btn.secondary"),
+    statusText: document.getElementById("stationStatus"),
+    station: document.getElementById("station"),
+    summonBtn: document.querySelector(".station-btn.primary")
+  };
+}
+
+
+/* =========================================================
+   UTILITIES
+========================================================= */
+
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const each = (list, fn) => list && Array.from(list).forEach(fn);
+
+
+/* =========================================================
+   INITIAL POSITION
+========================================================= */
+
+function setInitialDronePosition(drone) {
   drone.style.left = "50%";
   drone.style.top = "40%";
   drone.style.transition = "all 3s ease-in-out";
+}
 
-  /* ================= RANDOM FLYING (CONTROLLED) ================= */
 
-  let isFlying = true;
-  let flyTimer = null;
+/* =========================================================
+   FLYING SYSTEM
+========================================================= */
 
-  function flyRandom() {
+function setupFlyingSystem({ drone, hero }) {
+
+  window.flyRandom = function () {
+
     if (!isFlying || isDocked) return;
 
     const { width, height } = hero.getBoundingClientRect();
@@ -40,390 +113,402 @@ else {
     drone.style.top = Math.random() * (height - 120) + "px";
 
     flyTimer = setTimeout(flyRandom, 3000);
-  }
+  };
 
-  function startFlying() {
+  window.startFlying = function () {
     if (isFlying) return;
     isFlying = true;
     flyRandom();
-  }
+  };
 
-  function stopFlying() {
+  window.stopFlying = function () {
     isFlying = false;
     clearTimeout(flyTimer);
-  }
+  };
+}
 
 
-  setTimeout(() => {
-    drone.style.opacity = "1";
-    drone.style.pointerEvents = "auto";
-    flyRandom(); // ✅ correct starter
-  }, 10000); // show drone after 10s
-  /* ================= BUTTON CONTROL ================= */
+async function revealDroneAfterDelay(drone) {
+  await wait(10000);
 
-  const btn = document.getElementById("toggleBtn");
+  drone.style.opacity = "1";
+  drone.style.pointerEvents = "auto";
+  flyRandom();
+}
 
-  if (btn) {
-    btn.textContent = "STATUE"; // starts flying
 
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
+/* =========================================================
+   EYES MODE
+========================================================= */
 
-      if (isFlying) {
-        // 🗿 STATUE MODE
-        stopFlying();
-        btn.textContent = "STARGAZE";
+function updateEyesMode(eyes) {
+  each(eyes, e => {
+    if (isFlying) e.classList.remove("statue");
+    else e.classList.add("statue");
+  });
+}
 
-      } else {
-        // 🌌 STARGAZE MODE
-        startFlying();
-        btn.textContent = "STATUE";
-      }
 
-      setEyesToCurrentMode(); // update eye color
-    });
-  }
-  /* ================= CLICK REACTION ================= */
-  /* ================= CLICK REACTION ================= */
+/* =========================================================
+   TOGGLE BUTTON
+========================================================= */
+
+function setupToggleButton({ toggleBtn, eyes }) {
+
+  if (!toggleBtn) return;
+
+  toggleBtn.textContent = "STATUE";
+
+  toggleBtn.addEventListener("click", e => {
+
+    e.preventDefault();
+
+    if (isFlying) {
+      stopFlying();
+wasFlyingBeforeDock = false;
+      toggleBtn.textContent = "STARGAZE";
+    } else {
+      startFlying();
+wasFlyingBeforeDock = true;
+      toggleBtn.textContent = "STATUE";
+    }
+
+    updateEyesMode(eyes);
+  });
+}
+
+
+/* =========================================================
+   CLICK REACTION
+========================================================= */
+
+function setupClickReaction({ drone, hero, eyes }) {
+
   drone.addEventListener("click", () => {
+ if (isDocked||isDocking) {
 
-    // 🧹 Remove mode color first
-    eyes.forEach(e => {
-      e.classList.remove("statue");
-      e.classList.add("angry");   // 🔴 red
+    // Only red eyes — nothing else
+    each(eyes, e => {
+      e.classList.remove("dock");
+      e.classList.add("angry");
     });
 
+    // Return to dock color after 1 second
+    setTimeout(() => {
+      each(eyes, e => {
+        e.classList.remove("angry");
+        e.classList.add("dock");
+      });
+    }, 1000);
+
+    return; // 🚫 Stop here — no other behavior
+  }
+    each(eyes, e => {
+      e.classList.remove("statue");
+      e.classList.add("angry");
+    });
+ 
     drone.classList.add("dash");
 
     const { width, height } = hero.getBoundingClientRect();
+
     drone.style.left = Math.random() * (width - 120) + "px";
     drone.style.top = Math.random() * (height - 120) + "px";
 
     setTimeout(() => drone.classList.remove("dash"), 500);
 
-    // ⏱️ Restore correct mode color
     setTimeout(() => {
-      eyes.forEach(e => e.classList.remove("angry"));
-      setEyesToCurrentMode();   // 🧠 restore yellow or normal
+      each(eyes, e => e.classList.remove("angry"));
+      updateEyesMode(eyes);
     }, 1500);
   });
-  /* ================= VIDEO → IMAGE SWITCH ================= */
-  if (video && image) {
-    const switchToImage = () => {
-      video.style.display = "none";
-      image.classList.add("show");
-    };
-
-    video.addEventListener("ended", switchToImage);
-    video.addEventListener("timeupdate", () => {
-      if (video.currentTime >= video.duration - 0.1) switchToImage();
-    });
-  }
-/* ================= DRAG → FLY TO DROP (SCREEN SAFE) ================= */
-
-let isDragging = false;
-let offsetX = 0;
-let offsetY = 0;
-
-// START DRAG (statue mode only)
-drone.addEventListener("mousedown", (e) => {
-
-  if (isFlying) return;
-
-  isDragging = true;
-
-  const rect = drone.getBoundingClientRect();
-  offsetX = e.clientX - rect.left;
-  offsetY = e.clientY - rect.top;
-
-  drone.style.transition = "none";
-  drone.style.cursor = "grabbing";
-});
+}
 
 
-// DROP → FLY TO POSITION (inside viewport)
-document.addEventListener("mouseup", (e) => {
-  if (!isDragging) return;
+/* =========================================================
+   VIDEO → IMAGE SWITCH
+========================================================= */
 
-  isDragging = false;
-  drone.style.cursor = "grab";
+function setupVideoSwitch({ video, image }) {
 
-  const droneRect = drone.getBoundingClientRect();
+  if (!video || !image) return;
 
-  // 👇 Position relative to viewport (NOT hero)
-  let x = e.clientX - offsetX;
-  let y = e.clientY - offsetY;
+  const switchToImage = () => {
+    video.style.display = "none";
+    image.classList.add("show");
+  };
 
-  // 🚧 Keep inside screen boundaries
-  x = Math.max(0, Math.min(window.innerWidth - droneRect.width, x));
-  y = Math.max(0, Math.min(window.innerHeight - droneRect.height, y));
+  video.addEventListener("ended", switchToImage);
 
-  // ✨ Smooth movement
-  drone.style.transition = "all 3.0s ease";
-  drone.style.left = `${x}px`;
-  drone.style.top = `${y}px`;
-});
-
-  /* ================= TEXT "RIO" ================= */
-  if (brand) {
-    brand.textContent = "";
-    const text = "RIO";
-    setTimeout(() => {
-      text.split("").forEach((letter, i) => {
-        const span = document.createElement("span");
-        span.textContent = letter;
-        span.classList.add("wave-letter");
-        span.style.animationDelay = `${i * 0.3}s`;
-        brand.appendChild(span);
-      });
-    }, 9000);
-  }
-
-  /* ================= HERO CONTENT ================= */
-  if (heroContent) {
-    setTimeout(() => heroContent.classList.add("show"), 10000);
-  }
-
-/* ================= PERFECT SUMMON → DOCK SYSTEM ================= */
-
-let isDocked = false;
-
-const station = document.getElementById("station");
-const summonBtn = document.querySelector(".station-btn.primary");
+  video.addEventListener("timeupdate", () => {
+    if (video.currentTime >= video.duration - 0.1)
+      switchToImage();
+  });
+}
 
 
-if (summonBtn && station && drone) {
-  summonBtn.addEventListener("click", (e) => {
+/* =========================================================
+   DRAG SYSTEM
+========================================================= */
+
+function setupDragSystem({ drone }) {
+
+  let isDragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  drone.addEventListener("mousedown", e => {
+
+    if (isDocking || isFlying) return;
+
+    isDragging = true;
+
+    const rect = drone.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+
+    drone.style.transition = "none";
+    drone.style.cursor = "grabbing";
+  });
+
+  document.addEventListener("mouseup", e => {
+
+    if (!isDragging) return;
+
+    isDragging = false;
+    drone.style.cursor = "grab";
+
+    const rect = drone.getBoundingClientRect();
+
+    let x = e.clientX - offsetX;
+    let y = e.clientY - offsetY;
+
+    x = Math.max(0, Math.min(window.innerWidth - rect.width, x));
+    y = Math.max(0, Math.min(window.innerHeight - rect.height, y));
+
+    drone.style.transition = "all 3s ease";
+    drone.style.left = `${x}px`;
+    drone.style.top = `${y}px`;
+  });
+}
+
+
+/* =========================================================
+   SCAN SYSTEM
+========================================================= */
+
+function setupScanSystem({ scanBtn, statusText, scanDiv }) {
+
+  if (!scanBtn) return;
+
+  scanBtn.addEventListener("click", async e => {
+
     e.preventDefault();
+
+    scanDiv.style.display = "none";
+    statusText.textContent = "Scanning...";
+    statusText.classList.remove("text-danger");
+    statusText.classList.remove("text-success");
+      statusText.classList.add("text-dark");
+
+    await wait(2000);
+
+    if (isDocked) {
+      statusText.textContent = "Scan completed";
+      statusText.classList.remove("text-dark");
+      statusText.classList.remove("text-danger");
+      statusText.classList.add("text-success");
+      scanDiv.style.display = "block";
+    } else {
+      statusText.textContent = "Pet not docked";
+       statusText.classList.remove("text-dark");
+      statusText.classList.remove("text-success");
+      statusText.classList.add("text-danger");
+    }
+  });
+}
+
+
+/* =========================================================
+   BRAND TEXT
+========================================================= */
+
+function setupBrandText({ brand }) {
+
+  if (!brand) return;
+
+  brand.textContent = "";
+
+  const text = "RIO";
+
+  setTimeout(() => {
+
+    text.split("").forEach((letter, i) => {
+
+      const span = document.createElement("span");
+      span.textContent = letter;
+      span.classList.add("wave-letter");
+      span.style.animationDelay = `${i * 0.3}s`;
+
+      brand.appendChild(span);
+    });
+
+  }, 9000);
+}
+
+
+/* =========================================================
+   HERO CONTENT
+========================================================= */
+
+function setupHeroContent({ heroContent }) {
+  if (!heroContent) return;
+  setTimeout(() => heroContent.classList.add("show"), 10000);
+}
+
+
+/* =========================================================
+   SUMMON / DOCK SYSTEM
+========================================================= */
+
+function setupSummonDockSystem({ drone, hero, summonBtn }) {
+
+  if (!summonBtn) return;
+
+  const eyes = drone?.querySelectorAll(".eye"); // ✅ GET EYES
+
+  summonBtn.addEventListener("click", e => {
+
+    e.preventDefault();
+    isDocking = true;
 
     const batteryText = document.querySelector(".battery-text");
     const batteryRect = batteryText.getBoundingClientRect();
-    const heroRect = hero.getBoundingClientRect(); // hero container
+    const heroRect = hero.getBoundingClientRect();
 
-    // Center of battery text in viewport
     const centerX = batteryRect.left + batteryRect.width / 2;
     const centerY = batteryRect.top + batteryRect.height / 2;
 
-    // Convert to hero coordinates (absolute inside hero)
     const absX = centerX - heroRect.left;
     const absY = centerY - heroRect.top;
 
     if (!isDocked) {
-      // 🔋 DOCK MODE
+
+      /* ================= DOCK MODE ================= */
+
       isDocked = true;
-      stopFlying(); // stop AI
+      stopFlying();
 
-      // Get current drone position (viewport coordinates)
-      const droneRect = drone.getBoundingClientRect();
-      const currentX = droneRect.left + droneRect.width / 2;
-      const currentY = droneRect.top + droneRect.height / 2;
+      const rect = drone.getBoundingClientRect();
 
-      // Set drone at current visual position (fixed) so animation starts from here
       drone.style.position = "fixed";
-      drone.style.left = currentX + "px";
-      drone.style.top = currentY + "px";
+      drone.style.left = rect.left + rect.width / 2 + "px";
+      drone.style.top = rect.top + rect.height / 2 + "px";
       drone.style.transform = "translate(-50%, -50%)";
       drone.style.transition = "all 0.9s cubic-bezier(.50,.61,.36,1)";
 
-      // Animate to battery text
       requestAnimationFrame(() => {
         drone.style.left = centerX + "px";
         drone.style.top = centerY + "px";
       });
 
-      // After animation completes, switch to absolute inside hero
       drone.addEventListener("transitionend", function fixDock() {
-        drone.style.transition = ""; // remove animation
-        drone.style.position = "absolute"; // now absolute
+
+        drone.style.transition = "";
+        drone.style.position = "absolute";
         drone.style.left = absX + "px";
         drone.style.top = absY + "px";
-        drone.style.transform = "translate(-50%, -50%)";
+
         drone.removeEventListener("transitionend", fixDock);
       });
- eyes.forEach(e => {
-      e.classList.add("dock");   // green
-    });
+
+/* Apply dock color */
+eyes?.forEach(e => e.classList.add("dock"));
+
       summonBtn.textContent = "Dismiss";
 
     } else {
-    // 🚀 RELEASE MODE
-// 🚀 RELEASE MODE
-isDocked = false;
 
-// Current viewport position
-const droneRect = drone.getBoundingClientRect();
-const heroRect = hero.getBoundingClientRect();
+      /* ================= RELEASE MODE ================= */
 
-// Convert viewport → hero coordinates
-const currentX = droneRect.left - heroRect.left + droneRect.width / 2;
-const currentY = droneRect.top - heroRect.top + droneRect.height / 2;
+      isDocked = false;
 
-// 1️⃣ Freeze visual position
-drone.style.transition = "none";
-drone.style.position = "absolute";
-drone.style.left = currentX + "px";
-drone.style.top = currentY + "px";
-drone.style.transform = "translate(-50%, -50%)";
+      const rect = drone.getBoundingClientRect();
+      const heroRect = hero.getBoundingClientRect();
 
-// Force layout sync
-drone.getBoundingClientRect();
+      const currentX = rect.left - heroRect.left + rect.width / 2;
+      const currentY = rect.top - heroRect.top + rect.height / 2;
 
-// 2️⃣ Animate fly-off
-drone.style.transition = "all 0.6s ease-out";
-drone.style.left = currentX + 20 + "px";
-drone.style.top = currentY - 40 + "px";
+      drone.style.transition = "none";
+      drone.style.position = "absolute";
+      drone.style.left = currentX + "px";
+      drone.style.top = currentY + "px";
 
-// 3️⃣ After animation → switch to fixed for AI flying
-drone.addEventListener("transitionend", function releaseDrone() {
+      drone.getBoundingClientRect();
 
-  const rect = drone.getBoundingClientRect();
+      drone.style.transition = "all 0.6s ease-out";
+      drone.style.left = currentX + 20 + "px";
+      drone.style.top = currentY - 40 + "px";
 
-  drone.style.transition = "none";
-  drone.style.position = "fixed";
-  drone.style.left = rect.left + rect.width / 2 + "px";
-  drone.style.top = rect.top + rect.height / 2 + "px";
-  drone.style.transform = "translate(-50%, -50%)";
+      drone.addEventListener("transitionend", function release() {
 
-  drone.getBoundingClientRect(); // flush
+        const r = drone.getBoundingClientRect();
 
-  drone.style.transition = "all 3s ease-in-out";
+        drone.style.transition = "none";
+        drone.style.position = "fixed";
+        drone.style.left = r.left + r.width / 2 + "px";
+        drone.style.top = r.top + r.height / 2 + "px";
+
+        drone.getBoundingClientRect();
+
+        drone.style.transition = "all 3s ease-in-out";
+
+
+       if (wasFlyingBeforeDock) {
   startFlying();
-eyes.forEach(e => {
-      e.classList.remove("dock");
-    });
-  drone.removeEventListener("transitionend", releaseDrone);
+} else {
+  stopFlying();
+}
+        isDocking = false;
+
+        drone.removeEventListener("transitionend", release);
+      });
+
+      /* ✅ REMOVE DOCK EYE COLOR */
+eyes?.forEach(e => {
+  e.classList.remove("dock");
+
 });
 
-
-
-  summonBtn.textContent = "Summon";
-}
+      summonBtn.textContent = "Summon";
+    }
   });
 }
 
+/* =========================================================
+   ABOUT SECTION ANIMATION (ORIGINAL)
+========================================================= */
 
-
-
-
-
-
-
-
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//  ================= ABOUT =================
-// Function to animate about section when in view
 function animateAboutSection() {
+
   const section = document.querySelector(".about-section");
   if (!section) return;
 
-  const triggerPoint = window.innerHeight * 0.85; // trigger when 85% down the viewport
+  const triggerPoint = window.innerHeight * 0.85;
   const sectionTop = section.getBoundingClientRect().top;
 
   if (sectionTop <= triggerPoint) {
-    const aboutElements = section.querySelectorAll(
+
+    const elements = section.querySelectorAll(
       ".about-heading, .about-text, .about-btn, .about-img-wrapper"
     );
 
-    aboutElements.forEach((el, index) => {
+    elements.forEach((el, i) => {
+
       el.style.opacity = 0;
       el.style.transform = "translateY(40px)";
-      el.style.transition = `all 0.8s cubic-bezier(0.22,1,0.36,1) ${index * 0.25}s`;
+      el.style.transition =
+        `all 0.8s cubic-bezier(0.22,1,0.36,1) ${i * 0.25}s`;
 
       setTimeout(() => {
         el.style.opacity = 1;
@@ -431,20 +516,17 @@ function animateAboutSection() {
       }, 50);
     });
 
-    // Remove scroll listener after animation to prevent re-triggering
     window.removeEventListener("scroll", animateAboutSection);
   }
 }
 
-// Trigger on scroll
-window.addEventListener("scroll", animateAboutSection);
 
-// Also check immediately in case section is already in view
-animateAboutSection();
+/* =========================================================
+   SERVICES ANIMATION (ORIGINAL)
+========================================================= */
 
-
-//  ================= SERVICES =================
 function animateServicesSection() {
+
   const section = document.querySelector("section.px-4.px-md-5.py-5");
   if (!section) return;
 
@@ -452,91 +534,94 @@ function animateServicesSection() {
   const sectionTop = section.getBoundingClientRect().top;
 
   if (sectionTop <= triggerPoint) {
-    // Animate heading & description
-    const heading = section.querySelector(".section-title");
-    const desc = section.querySelector(".section-desc");
 
-    heading.classList.add("services-show");
-    desc.classList.add("services-show");
+    section.querySelector(".section-title")?.classList.add("services-show");
+    section.querySelector(".section-desc")?.classList.add("services-show");
 
-    // Animate all images & labels with stagger
     const cards = section.querySelectorAll(".service-img-wrap, .service-label");
-    cards.forEach((el, i) => {
-      setTimeout(() => {
-        el.classList.add("services-show"); // matches CSS now
-      }, i * 150);
-    });
 
-    // Remove scroll listener so it runs only once
+    cards.forEach((el, i) =>
+      setTimeout(() => el.classList.add("services-show"), i * 150)
+    );
+
     window.removeEventListener("scroll", animateServicesSection);
   }
 }
 
-//  ================= PROJECT =================
-// Scroll listener
-document.addEventListener("DOMContentLoaded", () => {
-  const scrollElements = document.querySelectorAll(".section-title, .section-desc, .service-img-wrap, .service-label");
 
-  const observer = new IntersectionObserver((entries, observer) => {
-    entries.forEach((entry, index) => {
+/* =========================================================
+   PROJECT OBSERVERS (ORIGINAL)
+========================================================= */
+
+function setupProjectObservers() {
+
+  const scrollElements =
+    document.querySelectorAll(
+      ".section-title, .section-desc, .service-img-wrap, .service-label"
+    );
+
+  const observer = new IntersectionObserver((entries, obs) => {
+
+    entries.forEach((entry, i) => {
+
       if (entry.isIntersecting) {
-        entry.target.style.setProperty('--delay', `${index * 0.15}s`); // stagger
+
+        entry.target.style.setProperty('--delay', `${i * 0.15}s`);
         entry.target.classList.add("services-show");
-        observer.unobserve(entry.target);
+
+        obs.unobserve(entry.target);
       }
     });
+
   }, { threshold: 0.2 });
 
   scrollElements.forEach(el => observer.observe(el));
-});
-document.addEventListener("DOMContentLoaded", () => {
-  const scrollElements = document.querySelectorAll(".animate-on-scroll .section-title, .animate-on-scroll .section-desc");
+}
 
-  const observer = new IntersectionObserver((entries, observer) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const delay = entry.target.getAttribute('data-delay') || 0;
-        entry.target.style.setProperty('--delay', delay + 's');
-        entry.target.classList.add('services-show');
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.2 });
 
-  scrollElements.forEach(el => observer.observe(el));
-});
-//  ================= STATUS =================
-document.addEventListener("DOMContentLoaded", () => {
+/* =========================================================
+   STATS COUNTER (ORIGINAL)
+========================================================= */
+
+function setupStatsCounter() {
+
   const stats = document.querySelectorAll(".animate-on-scroll");
 
-  const observer = new IntersectionObserver((entries, observer) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        // Fade in
-        entry.target.querySelectorAll(".stats-label, .stats-value").forEach(el => {
-          el.classList.add("stats-show");
-        });
+  const observer = new IntersectionObserver((entries, obs) => {
 
-        // Count-up numbers
+    entries.forEach(entry => {
+
+      if (entry.isIntersecting) {
+
+        entry.target.querySelectorAll(
+          ".stats-label, .stats-value"
+        ).forEach(el => el.classList.add("stats-show"));
+
         entry.target.querySelectorAll(".stats-value").forEach(el => {
+
           const target = +el.getAttribute("data-target");
           let current = 0;
-          const increment = target / 100; // 100 steps
+          const increment = target / 100;
+
           const interval = setInterval(() => {
+
             current += increment;
+
             if (current >= target) {
               el.textContent = target;
               clearInterval(interval);
             } else {
               el.textContent = Math.floor(current);
             }
-          }, 20); // speed of counting
+
+          }, 20);
         });
 
-        observer.unobserve(entry.target); // animate once
+        obs.unobserve(entry.target);
       }
     });
+
   }, { threshold: 0.3 });
 
   stats.forEach(stat => observer.observe(stat));
-});
+}
