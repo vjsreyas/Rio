@@ -625,3 +625,56 @@ function setupStatsCounter() {
 
   stats.forEach(stat => observer.observe(stat));
 }
+
+// ==================DROPDOWN=========================
+
+const menuBtn = document.getElementById("menuBtn");
+const closeBtn = document.getElementById("closeBtn");
+const sideMenu = document.getElementById("sideMenu");
+
+menuBtn.onclick = () => sideMenu.classList.add("show");
+closeBtn.onclick = () => sideMenu.classList.remove("show");
+
+// ====================Ratting=====================
+const stars = document.querySelectorAll("#stars span");
+
+stars.forEach((star, index) => {
+  star.addEventListener("click", () => {
+
+    stars.forEach(s => s.classList.remove("active"));
+
+    for (let i = 0; i <= index; i++) {
+      stars[i].classList.add("active");
+    }
+
+  });
+});
+const gears = document.querySelectorAll("#gearRating .gear");
+
+gears.forEach((gear, index) => {
+  gear.addEventListener("click", () => {
+
+    const level = index + 1;
+
+    /* Speed map — smaller = faster */
+    const speeds = {
+      1: "6s",
+      2: "4s",
+      3: "2.5s",
+      4: "1.6s",
+      5: "0.9s"
+    };
+
+    gears.forEach((g, i) => {
+
+      g.classList.remove("spinning");
+
+      if (i < level) {
+        g.style.setProperty("--speed", speeds[level]);
+        g.classList.add("spinning");
+      }
+
+    });
+
+  });
+});
